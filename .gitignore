@@ -1,0 +1,17 @@
+# binaries
+runtime/
+leader.lock
+events.log
+
+# Go
+*.exe
+*.out
+*.test
+/vendor/
+
+# editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store

@@ -1,0 +1,6 @@
+[2025-12-13T18:48:10Z] app-a: Drift detected for app-a: desired=2 actual=0
+[2025-12-13T18:48:10Z] app-a: Scaling up app-a from 0 → 2
+[2025-12-13T18:48:10Z] app-b: Drift detected for app-b: desired=3 actual=0
+[2025-12-13T18:48:10Z] app-b: Scaling up app-b from 0 → 3
+[2025-12-13T18:51:00Z] app-demo: Drift detected for app-demo: desired=3 actual=0
+[2025-12-13T18:51:00Z] app-demo: Scaling up app-demo from 0 → 3

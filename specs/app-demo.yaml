@@ -1,0 +1,12 @@
+spec:
+    name: app-demo
+    replicas: 3
+status:
+    currentReplicas: 3
+    lastReconciled: "2025-12-13T19:03:13Z"
+    conditions:
+        - type: AdmissionApproved
+          status: "True"
+          reason: Accepted
+          message: admission passed
+          lastTransitionTime: "2025-12-13T18:51:00Z"
