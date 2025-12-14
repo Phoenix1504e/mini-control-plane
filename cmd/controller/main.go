@@ -1,70 +1,39 @@
 package main
 
 import (
+	"context"
 	"log"
-	"path/filepath"
 
-	"github.com/google/uuid"
+	clientv3 "go.etcd.io/etcd/client/v3"
 
-	"github.com/Phoenix1504e/mini-control-plane/pkg/api"
 	"github.com/Phoenix1504e/mini-control-plane/pkg/informer"
-	"github.com/Phoenix1504e/mini-control-plane/pkg/leader"
 	"github.com/Phoenix1504e/mini-control-plane/pkg/reconciler"
-	"github.com/Phoenix1504e/mini-control-plane/pkg/store"
+	"github.com/Phoenix1504e/mini-control-plane/pkg/storage"
 )
 
 func main() {
-	// Unique controller identity
-	id := uuid.NewString()
-	log.Printf("Controller starting with ID %s", id)
-
-	// =========================
-	// LEADER ELECTION
-	// =========================
-	isLeader, err := leader.TryAcquire(id)
-	if err != nil {
-		log.Fatal("leader election failed:", err)
-	}
-
-	if !isLeader {
-		log.Println("Not leader. Running in standby mode.")
-		select {} // follower does nothing
-	}
-
-	log.Println("I am the leader")
-	defer leader.Release()
-
-	// =========================
-	// EVENT-DRIVEN CONTROLLER
-	// =========================
-	log.Println("Starting informer (watch-based reconciliation)")
-
-	informer.Watch("http://localhost:8080/watch/resources", func(event api.WatchEvent) {
-		res := event.Resource
-
-		// Safety: admission must be approved
-		if !api.IsConditionTrue(res.Status.Conditions, "AdmissionApproved") {
-			log.Printf(
-				"Skipping reconcile for %s (admission not approved)",
-				res.Spec.Name,
-			)
-			return
-		}
-
-		// =========================
-		// RECONCILIATION
-		// =========================
-		if err := reconciler.Reconcile(res); err != nil {
-			log.Println("reconcile error:", err)
-			return
-		}
-
-		// =========================
-		// PERSIST STATUS
-		// =========================
-		resourcePath := filepath.Join("specs", res.Spec.Name+".yaml")
-		if err := store.SaveResource(resourcePath, res); err != nil {
-			log.Println("failed to save resource status:", err)
-		}
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints: []string{"localhost:2379"},
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	store, err := storage.NewEtcdStorage("/resources")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	inf := informer.NewInformer(cli, "/resources")
+	ctx := context.Background()
+	go inf.Start(ctx)
+
+	rec := reconciler.New(store)
+
+	log.Println("Controller running")
+
+	for ev := range inf.EventChan {
+		log.Printf("EVENT %s %s", ev.Type, ev.Resource.Spec.Name)
+		rec.Reconcile(ev.Resource)
+	}
 }

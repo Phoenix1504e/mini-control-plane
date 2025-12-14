@@ -1,42 +1,65 @@
 package informer
 
 import (
+	"context"
 	"encoding/json"
-	"io"
 	"log"
-	"net/http"
-	"time"
 
 	"github.com/Phoenix1504e/mini-control-plane/pkg/api"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-func Watch(url string, handler func(api.WatchEvent)) {
-	for {
-		resp, err := http.Get(url)
-		if err != nil {
-			log.Println("watch connect failed:", err)
-			time.Sleep(2 * time.Second)
-			continue
-		}
+type EventType string
 
-		decoder := json.NewDecoder(resp.Body)
+const (
+	Added    EventType = "ADDED"
+	Modified EventType = "MODIFIED"
+	Deleted  EventType = "DELETED"
+)
 
-		for {
-			var event api.WatchEvent
-			err := decoder.Decode(&event)
-			if err != nil {
-				if err == io.EOF {
-					log.Println("watch closed, reconnecting")
-				} else {
-					log.Println("watch decode error:", err)
-				}
-				resp.Body.Close()
-				break
-			}
+type Event struct {
+	Type     EventType
+	Resource *api.Resource
+}
 
-			handler(event)
-		}
+type Informer struct {
+	cli       *clientv3.Client
+	root      string
+	EventChan chan Event
+}
 
-		time.Sleep(1 * time.Second)
+func NewInformer(cli *clientv3.Client, root string) *Informer {
+	return &Informer{
+		cli:       cli,
+		root:      root,
+		EventChan: make(chan Event, 100),
 	}
+}
+
+func (i *Informer) Start(ctx context.Context) {
+	watchChan := i.cli.Watch(ctx, i.root+"/", clientv3.WithPrefix())
+
+	for w := range watchChan {
+		for _, ev := range w.Events {
+			var res api.Resource
+
+			switch ev.Type {
+			case clientv3.EventTypePut:
+				if err := json.Unmarshal(ev.Kv.Value, &res); err == nil {
+					eventType := Modified
+					if ev.Kv.CreateRevision == ev.Kv.ModRevision {
+						eventType = Added
+					}
+					i.EventChan <- Event{Type: eventType, Resource: &res}
+				}
+
+			case clientv3.EventTypeDelete:
+				if err := json.Unmarshal(ev.PrevKv.Value, &res); err == nil {
+					i.EventChan <- Event{Type: Deleted, Resource: &res}
+				}
+			}
+		}
+	}
+
+	log.Println("Informer stopped")
 }

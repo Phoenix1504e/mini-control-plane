@@ -2,31 +2,35 @@ package api
 
 import "time"
 
-func SetCondition(
-	conditions []Condition,
-	newCond Condition,
-) []Condition {
-	for i, c := range conditions {
-		if c.Type == newCond.Type {
-			if c.Status != newCond.Status {
-				newCond.LastTransitionTime = time.Now().Format(time.RFC3339)
-			} else {
-				newCond.LastTransitionTime = c.LastTransitionTime
-			}
-			conditions[i] = newCond
-			return conditions
-		}
-	}
-
-	newCond.LastTransitionTime = time.Now().Format(time.RFC3339)
-	return append(conditions, newCond)
+// Condition represents the state of the resource at a certain point
+type Condition struct {
+	Type               string    `json:"type"`
+	Status             string    `json:"status"` // True, False, Unknown
+	Reason             string    `json:"reason,omitempty"`
+	Message            string    `json:"message,omitempty"`
+	LastTransitionTime time.Time `json:"lastTransitionTime,omitempty"`
 }
 
-func IsConditionTrue(conditions []Condition, condType string) bool {
-	for _, c := range conditions {
-		if c.Type == condType && c.Status == "True" {
-			return true
+// SetCondition adds or updates a condition in the list
+func SetCondition(conditions *[]Condition, newCond Condition) {
+	for i, cond := range *conditions {
+		if cond.Type == newCond.Type {
+			newCond.LastTransitionTime = time.Now()
+			(*conditions)[i] = newCond
+			return
 		}
 	}
-	return false
+
+	newCond.LastTransitionTime = time.Now()
+	*conditions = append(*conditions, newCond)
+}
+
+// GetCondition returns a condition by type
+func GetCondition(conditions []Condition, condType string) *Condition {
+	for _, cond := range conditions {
+		if cond.Type == condType {
+			return &cond
+		}
+	}
+	return nil
 }
