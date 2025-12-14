@@ -1,16 +1,28 @@
 package apiserver
 
 import (
-	"log"
 	"net/http"
+
+	"github.com/Phoenix1504e/mini-control-plane/pkg/storage"
 )
 
-type Server struct {
-	Addr    string
-	Handler http.Handler
+type APIServer struct {
+	store  storage.Storage
+	Router *http.ServeMux
 }
 
-func (s *Server) Run() {
-	log.Println("API server listening on", s.Addr)
-	log.Fatal(http.ListenAndServe(s.Addr, s.Handler))
+func NewAPIServer(store storage.Storage) *APIServer {
+	s := &APIServer{
+		store:  store,
+		Router: http.NewServeMux(),
+	}
+
+	s.routes()
+	return s
+}
+
+func (s *APIServer) routes() {
+	s.Router.HandleFunc("/resources", s.handleList)
+	s.Router.HandleFunc("/resource", s.handleCreate)
+	s.Router.HandleFunc("/resource/status", s.handleStatusUpdate)
 }

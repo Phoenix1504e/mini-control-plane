@@ -23,7 +23,6 @@ func NewFileStorage(dir string) *FileStorage {
 	}
 }
 
-
 func (fs *FileStorage) path(name string) string {
 	return filepath.Join(fs.BaseDir, name+".yaml")
 }
@@ -45,7 +44,6 @@ func (fs *FileStorage) Create(res *api.Resource) error {
 
 	return nil
 }
-
 
 func (fs *FileStorage) Update(res *api.Resource) error {
 	data, err := yaml.Marshal(res)

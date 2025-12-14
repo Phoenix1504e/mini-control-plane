@@ -1,25 +1,22 @@
 package api
 
-type Condition struct {
-	Type               string `yaml:"type"`
-	Status             string `yaml:"status"`
-	Reason             string `yaml:"reason"`
-	Message            string `yaml:"message"`
-	LastTransitionTime string `yaml:"lastTransitionTime"`
+type ObjectMeta struct {
+	Name            string `json:"name"`
+	ResourceVersion string `json:"resourceVersion,omitempty"`
 }
 
 type ResourceSpec struct {
-	Name     string `yaml:"name"`
-	Replicas int    `yaml:"replicas"`
+	Name     string `json:"name"`
+	Replicas int    `json:"replicas"`
 }
 
 type ResourceStatus struct {
-	CurrentReplicas int         `yaml:"currentReplicas,omitempty"`
-	LastReconciled  string      `yaml:"lastReconciled,omitempty"`
-	Conditions      []Condition `yaml:"conditions,omitempty"`
+	CurrentReplicas int         `json:"currentReplicas,omitempty"`
+	Conditions      []Condition `json:"conditions,omitempty"`
 }
 
 type Resource struct {
-	Spec   ResourceSpec   `yaml:"spec"`
-	Status ResourceStatus `yaml:"status,omitempty"`
+	Metadata ObjectMeta     `json:"metadata"`
+	Spec     ResourceSpec   `json:"spec"`
+	Status   ResourceStatus `json:"status,omitempty"`
 }
