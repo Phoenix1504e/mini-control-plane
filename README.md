@@ -9,6 +9,14 @@ This project is intentionally focused on *control-plane mechanics* rather than
 workload execution or container orchestration.
 
 ---
+### Version 2 Overview
+
+This release evolves the project toward a Kubernetes-style control plane with real distributed systems fundamentals, including:
+- etcd-backed storage with strong consistency and MVCC (`resourceVersion`)
+- Optimistic concurrency control (compare-and-swap)
+- Atomic status subresource updates and structured Conditions
+- Event-driven watch + informer reconciliation (no polling)
+---
 
 ## Motivation
 
@@ -77,8 +85,8 @@ persisting desired state, and emitting watch events.
 Validates resources at creation time and records admission outcomes as status conditions.
 
 ### Storage Layer
-Abstracted storage interface inspired by etcd semantics.
-Current implementation uses file-backed storage.
+Abstracted storage interface using etcd as the backend.  
+The etcd implementation supports MVCC with `resourceVersion`, optimistic concurrency control, and atomic updates, aligning with real Kubernetes API server semantics.
 
 ### Watch & Informers
 Controllers subscribe to resource change events instead of polling, enabling
@@ -130,11 +138,26 @@ full orchestration.
 
 ---
 
-## Project Status
+## v2 Enhancements
 
-**Stage:** Experimental / Educational  
-**Maturity:** CNCF Sandbox–style  
-**Stability:** Not production-ready
+This version focuses on architectural correctness and core control-plane concepts rather than scope expansion.
+
+- Migrated from file-backed persistence to etcd for distributed consistency.
+- Implemented MVCC (`resourceVersion`) and atomic update guarantees.
+- Added watch based informers for real time event propagation.
+- Structured status updates via a dedicated subresource and Conditions.
+
+---
+
+### Project Status
+
+| Category | Status |
+|----------|--------|
+| Stage | Experimental |
+| Maturity | CNCF Sandbox –style |
+| Stability | Not production-ready |
+| Deployment | Educational / Learning purposes |
+
 
 ---
 
