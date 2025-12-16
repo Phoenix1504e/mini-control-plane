@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/Phoenix1504e/mini-control-plane/pkg/api"
 	clientv3 "go.etcd.io/etcd/client/v3"
+
+	"github.com/Phoenix1504e/mini-control-plane/pkg/api"
 )
 
 type EventType string
 
 const (
-	Added    EventType = "ADDED"
-	Modified EventType = "MODIFIED"
-	Deleted  EventType = "DELETED"
+	Added   EventType = "ADDED"
+	Updated EventType = "UPDATED"
 )
 
 type Event struct {
@@ -23,43 +23,56 @@ type Event struct {
 }
 
 type Informer struct {
-	cli       *clientv3.Client
-	root      string
+	client    *clientv3.Client
+	prefix    string
 	EventChan chan Event
 }
 
-func NewInformer(cli *clientv3.Client, root string) *Informer {
+func NewInformer(client *clientv3.Client, prefix string) *Informer {
 	return &Informer{
-		cli:       cli,
-		root:      root,
-		EventChan: make(chan Event, 100),
+		client:    client,
+		prefix:    prefix,
+		EventChan: make(chan Event),
 	}
 }
 
 func (i *Informer) Start(ctx context.Context) {
-	watchChan := i.cli.Watch(ctx, i.root+"/", clientv3.WithPrefix())
+	watchChan := i.client.Watch(ctx, i.prefix, clientv3.WithPrefix())
 
-	for w := range watchChan {
-		for _, ev := range w.Events {
-			var res api.Resource
+	for {
+		select {
+		case <-ctx.Done():
+			return
 
-			switch ev.Type {
-			case clientv3.EventTypePut:
-				if err := json.Unmarshal(ev.Kv.Value, &res); err == nil {
-					eventType := Modified
-					if ev.Kv.CreateRevision == ev.Kv.ModRevision {
-						eventType = Added
-					}
-					i.EventChan <- Event{Type: eventType, Resource: &res}
+		case resp, ok := <-watchChan:
+			if !ok {
+				log.Println("watch channel closed")
+				return
+			}
+
+			for _, ev := range resp.Events {
+				// Skip delete or empty events
+				if ev.Kv == nil || len(ev.Kv.Value) == 0 {
+					continue
 				}
 
-			case clientv3.EventTypeDelete:
-				if err := json.Unmarshal(ev.PrevKv.Value, &res); err == nil {
-					i.EventChan <- Event{Type: Deleted, Resource: &res}
+				var res api.Resource
+				if err := json.Unmarshal(ev.Kv.Value, &res); err != nil {
+					log.Println("failed to decode resource:", err)
+					continue
+				}
+
+				eventType := Updated
+				if ev.Type == clientv3.EventTypePut && ev.IsCreate() {
+					eventType = Added
+				}
+
+				i.EventChan <- Event{
+					Type:     eventType,
+					Resource: &res,
 				}
 			}
 		}
 	}
-
-	log.Println("Informer stopped")
 }
+

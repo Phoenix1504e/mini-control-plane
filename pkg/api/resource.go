@@ -12,6 +12,7 @@ type ResourceSpec struct {
 
 type ResourceStatus struct {
 	CurrentReplicas int         `json:"currentReplicas,omitempty"`
+        Placements map[string]int `json:"placements,omitempty"`
 	Conditions      []Condition `json:"conditions,omitempty"`
 }
 
