@@ -1,6 +1,7 @@
 # Mini Control Plane
+Mini Control Plane is an educational, Kubernetes-inspired control plane written in Go,
+focused on control-plane correctness and reconciliation behavior.
 
-Mini Control Plane is an educational, Kubernetes-inspired control plane written in Go.
 It demonstrates the core architectural patterns used by Kubernetes and other CNCF
 projects, including declarative APIs, admission control, reconciliation loops,
 watch-based informers, leader election, and status management.
@@ -9,13 +10,15 @@ This project is intentionally focused on *control-plane mechanics* rather than
 workload execution or container orchestration.
 
 ---
-### Version 2 Overview
+### Version 3 Overview
 
-This release evolves the project toward a Kubernetes-style control plane with real distributed systems fundamentals, including:
-- etcd-backed storage with strong consistency and MVCC (`resourceVersion`)
+This release completes the core control-plane architecture, including:
+- etcd-backed storage with MVCC (`resourceVersion`)
 - Optimistic concurrency control (compare-and-swap)
-- Atomic status subresource updates and structured Conditions
-- Event-driven watch + informer reconciliation (no polling)
+- Watch-based informers for event-driven reconciliation
+- Leader election using etcd leases for single-active controllers
+- A scheduler that assigns replicas to nodes based on desired state
+- Atomic status subresource updates with structured Conditions
 ---
 
 ## Motivation
@@ -67,6 +70,11 @@ flowchart TD
     Controller --> Storage
 ```
 
+The architecture mirrors Kubernetes control-plane behavior:
+the API server persists desired state, informers react to storage events,
+leader-elected controllers reconcile state, and the scheduler performs
+placement decisions. All state mutations are guarded by MVCC to ensure
+consistency and prevent lost updates.
 
 
 The API server is the single entry point for user intent.
@@ -94,6 +102,11 @@ immediate reconciliation.
 
 ### Controller
 Implements reconciliation logic, drift detection, and status updates.
+
+### Scheduler
+Determines placement of replicas onto nodes based on desired state.
+The scheduler is leader-gated and updates placement decisions via the
+status subresource, mirroring Kubernetes scheduling semantics.
 
 ### Leader Election
 Ensures only one controller instance actively reconciles at a time.
@@ -138,17 +151,6 @@ full orchestration.
 
 ---
 
-## v2 Enhancements
-
-This version focuses on architectural correctness and core control-plane concepts rather than scope expansion.
-
-- Migrated from file-backed persistence to etcd for distributed consistency.
-- Implemented MVCC (`resourceVersion`) and atomic update guarantees.
-- Added watch based informers for real time event propagation.
-- Structured status updates via a dedicated subresource and Conditions.
-
----
-
 ### Project Status
 
 | Category | Status |
@@ -187,22 +189,23 @@ https://github.com/cncf/foundation/blob/main/code-of-conduct.md
 ## Roadmap
 
 ### Short Term
-- Resource versioning and optimistic concurrency
-- Improved error handling and status reporting
-- Structured event objects
-- Expanded test coverage
+- Scheduler policies (spread vs binpack)
+- Leader election observability
+- Improved controller metrics and logging
+- Expanded end-to-end tests
 
 ### Medium Term
 - Mutating admission controllers
 - API versioning (v1alpha1, v1beta1)
-- Simple scheduler abstraction
-- Pluggable storage backends
+- Node capacity and constraint-aware scheduling
+- Controller crash recovery scenarios
 
 ### Long Term
 - RBAC-style authorization
-- Multi-resource dependency graph
-- Controller crash recovery
-- Educational visualizations of reconciliation
+- Multi-resource dependency graphs
+- Pluggable admission frameworks
+- Educational visualizations of reconciliation behavior
+
 
 ---
 
