@@ -52,22 +52,16 @@ The project favors clarity and correctness over scale and production optimizatio
 
 ```mermaid
 flowchart TD
-    Client[Client]
-    APIServer[API Server]
-    Admission[Admission Controller]
-    Storage[Storage]
-    Watch[Watch Informer]
-    Controller[Controller]
-    Runtime[Runtime]
-
-    Client --> APIServer
-    APIServer --> Admission
-    Admission --> Storage
-    Storage --> Watch
-    Watch --> Controller
-    Controller --> Runtime
-    Runtime --> Controller
-    Controller --> Storage
+    Client --> APIServer[API Server]
+    APIServer --> Admission[Admission Controller]
+    Admission --> Storage[(Storage)]
+    
+    Storage --> Watch[Watch Informer]
+    Watch --> Controller[Controller]
+    Controller --> Runtime[Runtime]
+    
+    Runtime -. observed state .-> Controller
+    Controller -. status updates .-> Storage
 ```
 
 The architecture mirrors Kubernetes control-plane behavior:
