@@ -1,0 +1,7 @@
+{
+  "scenario": "mvcc-conflicts",
+  "controllers": 1,
+  "resources": 20,
+  "duration": "30s",
+  "startedAt": "2026-05-16T16:35:54.327999055Z"
+}

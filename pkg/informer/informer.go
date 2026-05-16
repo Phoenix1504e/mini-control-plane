@@ -45,7 +45,7 @@ func (i *Informer) Start(ctx context.Context) {
 	)
 
 	injector := &faults.ProbabilisticInjector{
-		DropRate: 1.0,
+		DropRate: 0.25,
 	}
 
 	watchChan := faults.WrapWatchChannel(

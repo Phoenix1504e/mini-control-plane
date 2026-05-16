@@ -13,6 +13,13 @@ type Event struct {
 
 	Resource string `json:"resource,omitempty"`
 
+	DesiredReplicas int `json:"desiredReplicas,omitempty"`
+	CurrentReplicas int `json:"currentReplicas,omitempty"`
+
+	ResourceVersion string `json:"resourceVersion,omitempty"`
+
+	LeaderID string `json:"leaderID,omitempty"`
+
 	Message string `json:"message,omitempty"`
 }
 
@@ -22,7 +29,11 @@ type Logger struct {
 }
 
 func NewLogger(path string) (*Logger, error) {
-	f, err := os.Create(path)
+	f, err := os.OpenFile(
+	path,
+	os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+	0644,
+)
 	if err != nil {
 		return nil, err
 	}

@@ -56,6 +56,7 @@ func (r *Reconciler) Reconcile(res *api.Resource) error {
 
 	// Always fetch the latest version for MVCC correctness
 	current, err := r.Store.Get(res.Metadata.Name)
+        time.Sleep(5 * time.Second)
 	if err != nil {
 
 		emitErr := r.Logger.Emit(telemetry.Event{
