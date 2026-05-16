@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"log"
 
-	clientv3 "go.etcd.io/etcd/client/v3"
-
+	"github.com/Phoenix1504e/mini-control-plane/internal/faults"
 	"github.com/Phoenix1504e/mini-control-plane/pkg/api"
+
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type EventType string
@@ -37,10 +38,25 @@ func NewInformer(client *clientv3.Client, prefix string) *Informer {
 }
 
 func (i *Informer) Start(ctx context.Context) {
-	watchChan := i.client.Watch(ctx, i.prefix, clientv3.WithPrefix())
+	rawWatchChan := i.client.Watch(
+		ctx,
+		i.prefix,
+		clientv3.WithPrefix(),
+	)
+
+	injector := &faults.ProbabilisticInjector{
+		DropRate: 1.0,
+	}
+
+	watchChan := faults.WrapWatchChannel(
+		ctx,
+		rawWatchChan,
+		injector,
+	)
 
 	for {
 		select {
+
 		case <-ctx.Done():
 			return
 
@@ -51,18 +67,21 @@ func (i *Informer) Start(ctx context.Context) {
 			}
 
 			for _, ev := range resp.Events {
-				// Skip delete or empty events
+
+				// Ignore invalid events
 				if ev.Kv == nil || len(ev.Kv.Value) == 0 {
 					continue
 				}
 
 				var res api.Resource
+
 				if err := json.Unmarshal(ev.Kv.Value, &res); err != nil {
 					log.Println("failed to decode resource:", err)
 					continue
 				}
 
 				eventType := Updated
+
 				if ev.Type == clientv3.EventTypePut && ev.IsCreate() {
 					eventType = Added
 				}
