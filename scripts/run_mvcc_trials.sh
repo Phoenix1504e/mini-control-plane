@@ -2,7 +2,7 @@
 
 set -e
 
-CAMPAIGN="campaign-clean"
+CAMPAIGN="campaign-final"
 
 CONTROLLER_SET=(1 2 4 8)
 
@@ -41,32 +41,28 @@ do
         echo ""
 
         # Stop old processes safely
-        pkill etcd || true
-        pkill -f "./cmd/controller" || true
+	pkill controller || true
+	sleep 2
 
-        # IMPORTANT:
-        # wait for etcd mmap + WAL cleanup
-        sleep 5
-
-        # Remove old runtime state
-        if [ -d "default.etcd" ]; then
-            rm -rf default.etcd
-        fi
+	# Clean old resources from etcd
+	etcdctl del /resources --prefix
 
         # Remove old telemetry
         rm -f *.jsonl
 
         sleep 2
 
-        echo "Clean state prepared"
+	echo "Clean state prepared"
 
-        # Run experiment
-        go run ./tools/runner \
-            --scenario mvcc-conflicts/$CAMPAIGN \
-            --controllers $controllers \
-            --resources $RESOURCES \
-            --duration $DURATION
+	# Run experiment with watchdog timeout
+	timeout 90s go run ./tools/runner \
+    		--scenario mvcc-conflicts/$CAMPAIGN \
+    		--controllers $controllers \
+    		--resources $RESOURCES \
+    		--duration $DURATION
+	pkill controller || true
 
+	sleep 5
         echo ""
         echo "Trial completed"
         echo ""

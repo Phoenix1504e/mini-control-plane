@@ -1,0 +1,7 @@
+
+MVCC Conflict Aggregation
+
+controllers=1 trials=5 avg=0.00 stddev=0.00 runs=[0, 0, 0, 0, 0]
+controllers=2 trials=5 avg=6.00 stddev=2.61 runs=[2, 7, 6, 5, 10]
+controllers=4 trials=5 avg=23.40 stddev=2.87 runs=[21, 20, 25, 28, 23]
+controllers=8 trials=5 avg=82.00 stddev=11.08 runs=[83, 64, 82, 99, 82]

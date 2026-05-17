@@ -1,0 +1,7 @@
+{
+  "scenario": "mvcc-conflicts/campaign-clean",
+  "controllers": 1,
+  "resources": 10,
+  "duration": "20s",
+  "startedAt": "2026-05-17T14:19:14.042183014Z"
+}
