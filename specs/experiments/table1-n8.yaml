@@ -1,0 +1,12 @@
+experiment:
+  name: table1-n8
+  description: Eight-controller leader-election and conflict run.
+  controllers: 8
+  leaseTTL: 5s
+  retryInterval: 2s
+  faultInjection:
+    enabled: true
+    middleware: pkg/fault
+  logging:
+    format: jsonl
+    output: experiments/results/table1-n8.jsonl

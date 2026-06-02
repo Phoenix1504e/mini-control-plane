@@ -8,6 +8,8 @@ events.log
 *.out
 *.test
 /vendor/
+.gocache/
+.gomodcache/
 
 # editor
 .vscode/

@@ -63,6 +63,16 @@ func (fs *FileStorage) Update(res *api.Resource) error {
 	return nil
 }
 
+func (fs *FileStorage) UpdateStatus(res *api.Resource) error {
+	current, err := fs.Get(res.Spec.Name)
+	if err != nil {
+		return err
+	}
+
+	current.Status = res.Status
+	return fs.Update(current)
+}
+
 func (fs *FileStorage) Get(name string) (*api.Resource, error) {
 	data, err := os.ReadFile(fs.path(name))
 	if err != nil {

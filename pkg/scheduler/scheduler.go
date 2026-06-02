@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-
 	"github.com/Phoenix1504e/mini-control-plane/pkg/api"
 	"github.com/Phoenix1504e/mini-control-plane/pkg/storage"
 )
@@ -20,7 +19,7 @@ func New(store storage.Storage, nodes []string) *Scheduler {
 
 // Schedule assigns replicas to nodes
 func (s *Scheduler) Schedule(res *api.Resource) error {
-	current, err := s.store.Get(res.Metadata.Name)
+	current, err := s.store.Get(res.Spec.Name)
 	if err != nil {
 		return err
 	}
