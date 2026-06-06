@@ -17,3 +17,7 @@ events.log
 
 # OS
 .DS_Store
+bin/
+*.jsonl
+archived-experiments/
+experiments/leader-failover-old/
