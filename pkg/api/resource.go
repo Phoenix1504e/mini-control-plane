@@ -1,8 +1,10 @@
 package api
 
 type ObjectMeta struct {
-	Name            string `json:"name"`
-	ResourceVersion string `json:"resourceVersion,omitempty"`
+	Name              string   `json:"name"`
+	ResourceVersion   string   `json:"resourceVersion,omitempty"`
+	Finalizers        []string `json:"finalizers,omitempty"`
+	DeletionTimestamp string   `json:"deletionTimestamp,omitempty"`
 }
 
 type ResourceSpec struct {
@@ -11,9 +13,9 @@ type ResourceSpec struct {
 }
 
 type ResourceStatus struct {
-	CurrentReplicas int         `json:"currentReplicas,omitempty"`
-        Placements map[string]int `json:"placements,omitempty"`
-	Conditions      []Condition `json:"conditions,omitempty"`
+	CurrentReplicas int            `json:"currentReplicas,omitempty"`
+	Placements      map[string]int `json:"placements,omitempty"`
+	Conditions      []Condition    `json:"conditions,omitempty"`
 }
 
 type Resource struct {

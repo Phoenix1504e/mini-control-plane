@@ -15,6 +15,7 @@ type EventType string
 const (
 	Added   EventType = "ADDED"
 	Updated EventType = "UPDATED"
+	Deleted EventType = "DELETED"
 )
 
 type Event struct {
@@ -37,10 +38,46 @@ func NewInformer(client *clientv3.Client, prefix string) *Informer {
 }
 
 func (i *Informer) Start(ctx context.Context) {
-	watchChan := i.client.Watch(ctx, i.prefix, clientv3.WithPrefix())
+
+	// ----------------------------------
+	// Initial LIST
+	// ----------------------------------
+	resp, err := i.client.Get(
+		ctx,
+		i.prefix,
+		clientv3.WithPrefix(),
+	)
+	if err != nil {
+		log.Println("initial list failed:", err)
+	} else {
+		for _, kv := range resp.Kvs {
+			var res api.Resource
+
+			if err := json.Unmarshal(kv.Value, &res); err != nil {
+				log.Println("failed to decode resource:", err)
+				continue
+			}
+
+			i.EventChan <- Event{
+				Type:     Added,
+				Resource: &res,
+			}
+		}
+	}
+
+	// ----------------------------------
+	// Watch for future updates
+	// ----------------------------------
+	watchChan := i.client.Watch(
+		ctx,
+		i.prefix,
+		clientv3.WithPrefix(),
+		clientv3.WithPrevKV(),
+	)
 
 	for {
 		select {
+
 		case <-ctx.Done():
 			return
 
@@ -51,20 +88,39 @@ func (i *Informer) Start(ctx context.Context) {
 			}
 
 			for _, ev := range resp.Events {
-				// Skip delete or empty events
-				if ev.Kv == nil || len(ev.Kv.Value) == 0 {
+
+				var (
+					res       api.Resource
+					eventType EventType
+					data      []byte
+				)
+
+				switch ev.Type {
+
+				case clientv3.EventTypePut:
+					data = ev.Kv.Value
+
+					if ev.IsCreate() {
+						eventType = Added
+					} else {
+						eventType = Updated
+					}
+
+				case clientv3.EventTypeDelete:
+					if ev.PrevKv == nil {
+						continue
+					}
+
+					data = ev.PrevKv.Value
+					eventType = Deleted
+
+				default:
 					continue
 				}
 
-				var res api.Resource
-				if err := json.Unmarshal(ev.Kv.Value, &res); err != nil {
+				if err := json.Unmarshal(data, &res); err != nil {
 					log.Println("failed to decode resource:", err)
 					continue
-				}
-
-				eventType := Updated
-				if ev.Type == clientv3.EventTypePut && ev.IsCreate() {
-					eventType = Added
 				}
 
 				i.EventChan <- Event{
@@ -75,4 +131,3 @@ func (i *Informer) Start(ctx context.Context) {
 		}
 	}
 }
-

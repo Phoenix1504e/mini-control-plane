@@ -1,0 +1,6 @@
+{
+  "spec": {
+    "name": "app-demo",
+    "replicas": 3
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "spec": {
+    "name": "app-debug",
+    "replicas": 1
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "spec": {
+    "name": "app-test",
+    "replicas": 5
+  }
+}

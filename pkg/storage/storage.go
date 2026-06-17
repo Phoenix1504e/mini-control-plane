@@ -6,6 +6,8 @@ type Storage interface {
 	Create(res *api.Resource) error
 	Update(res *api.Resource) error
 	UpdateStatus(res *api.Resource) error
+	Delete(name string) error
+
 	Get(name string) (*api.Resource, error)
 	List() ([]*api.Resource, error)
 }

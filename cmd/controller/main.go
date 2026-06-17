@@ -3,15 +3,17 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/Phoenix1504e/mini-control-plane/pkg/informer"
-        "github.com/Phoenix1504e/mini-control-plane/pkg/scheduler"
 	"github.com/Phoenix1504e/mini-control-plane/pkg/leader"
 	"github.com/Phoenix1504e/mini-control-plane/pkg/reconciler"
+	"github.com/Phoenix1504e/mini-control-plane/pkg/scheduler"
 	"github.com/Phoenix1504e/mini-control-plane/pkg/storage"
+	"github.com/Phoenix1504e/mini-control-plane/pkg/workqueue"
 )
 
 func main() {
@@ -38,12 +40,16 @@ func main() {
 
 	// Reconciler
 	rec := reconciler.New(store)
-        sched := scheduler.New(store, []string{
-	"node-a",
-	"node-b",
-	"node-c",
-        })
 
+	// Scheduler
+	sched := scheduler.New(store, []string{
+		"node-a",
+		"node-b",
+		"node-c",
+	})
+
+	// Workqueue
+	queue := workqueue.New(100)
 
 	// Leader election
 	elector := leader.New(cli, "/control-plane/leader", controllerID)
@@ -51,7 +57,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start leader election loop
+	// Start leader election
 	go func() {
 		if err := elector.Run(ctx); err != nil {
 			log.Fatal(err)
@@ -61,19 +67,114 @@ func main() {
 	// Start informer
 	go inf.Start(ctx)
 
+	log.Println("Controller waiting for events...")
+
+	// Startup resync after leadership acquisition
+	go func() {
+		for !elector.IsLeader() {
+			time.Sleep(500 * time.Millisecond)
+		}
+
+		log.Println("Leader acquired, performing startup resync")
+
+		items, err := store.List()
+		if err != nil {
+			log.Println("Resync failed:", err)
+			return
+		}
+
+		for _, res := range items {
+
+			log.Printf(
+				"RESYNC: resource=%s",
+				res.Spec.Name,
+			)
+
+			queue.Add(res.Spec.Name)
+		}
+	}()
+
+	// Worker
+	go func() {
+
+		for {
+
+			key := queue.Get()
+
+			res, err := store.Get(key)
+			if err != nil {
+
+				// Resource already deleted
+				queue.Forget(key)
+				continue
+			}
+
+			log.Printf(
+				"WORKER: processing %s",
+				key,
+			)
+
+			if err := rec.Reconcile(res); err != nil {
+
+				log.Printf(
+					"Worker reconcile failed for %s: %v",
+					key,
+					err,
+				)
+
+				queue.AddRateLimited(key)
+				continue
+			}
+
+			if err := sched.Schedule(res); err != nil {
+
+				log.Printf(
+					"Worker schedule failed for %s: %v",
+					key,
+					err,
+				)
+
+				queue.AddRateLimited(key)
+				continue
+			}
+
+			queue.Forget(key)
+		}
+	}()
+
 	// Controller event loop
 	for ev := range inf.EventChan {
-	if !elector.IsLeader() {
-		continue
-	}
 
-	if err := rec.Reconcile(ev.Resource); err != nil {
-		log.Println("Reconcile error:", err)
-		continue
-	}
+		log.Printf(
+			"EVENT: %s resource=%s",
+			ev.Type,
+			ev.Resource.Spec.Name,
+		)
 
-	if err := sched.Schedule(ev.Resource); err != nil {
-		log.Println("Schedule error:", err)
+		if !elector.IsLeader() {
+			log.Printf(
+				"Skipping event for %s: not leader",
+				ev.Resource.Spec.Name,
+			)
+			continue
+		}
+
+		switch ev.Type {
+
+		case informer.Deleted:
+			log.Printf(
+				"Resource deleted: %s",
+				ev.Resource.Spec.Name,
+			)
+			continue
+
+		case informer.Added, informer.Updated:
+			log.Printf(
+				"QUEUE: %s",
+				ev.Resource.Spec.Name,
+			)
+
+			queue.Add(ev.Resource.Spec.Name)
+		}
 	}
-}
 }

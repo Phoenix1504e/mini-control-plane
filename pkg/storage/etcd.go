@@ -63,6 +63,22 @@ func (s *EtcdStorage) Create(res *api.Resource) error {
 	return nil
 }
 
+// Delete removes a resource
+func (s *EtcdStorage) Delete(name string) error {
+	key := s.key(name)
+
+	resp, err := s.cli.Delete(context.Background(), key)
+	if err != nil {
+		return err
+	}
+
+	if resp.Deleted == 0 {
+		return fmt.Errorf("not found")
+	}
+
+	return nil
+}
+
 // Update updates a resource using optimistic concurrency (resourceVersion)
 func (s *EtcdStorage) Update(res *api.Resource) error {
 	key := s.key(res.Spec.Name)
@@ -144,6 +160,7 @@ func (s *EtcdStorage) List() ([]*api.Resource, error) {
 
 	return items, nil
 }
+
 func (s *EtcdStorage) UpdateStatus(res *api.Resource) error {
 	key := s.key(res.Spec.Name)
 

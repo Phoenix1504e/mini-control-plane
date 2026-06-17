@@ -17,6 +17,7 @@ type FileStorage struct {
 
 func NewFileStorage(dir string) *FileStorage {
 	_ = os.MkdirAll(dir, 0755)
+
 	return &FileStorage{
 		BaseDir: dir,
 		WatchCh: make(chan api.WatchEvent, 100),
@@ -29,6 +30,7 @@ func (fs *FileStorage) path(name string) string {
 
 func (fs *FileStorage) Create(res *api.Resource) error {
 	path := fs.path(res.Spec.Name)
+
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("resource already exists")
 	}
@@ -70,7 +72,26 @@ func (fs *FileStorage) UpdateStatus(res *api.Resource) error {
 	}
 
 	current.Status = res.Status
+
 	return fs.Update(current)
+}
+
+func (fs *FileStorage) Delete(name string) error {
+	current, err := fs.Get(name)
+	if err != nil {
+		return err
+	}
+
+	if err := os.Remove(fs.path(name)); err != nil {
+		return err
+	}
+
+	fs.WatchCh <- api.WatchEvent{
+		Type:     api.Deleted,
+		Resource: current,
+	}
+
+	return nil
 }
 
 func (fs *FileStorage) Get(name string) (*api.Resource, error) {
@@ -80,6 +101,7 @@ func (fs *FileStorage) Get(name string) (*api.Resource, error) {
 	}
 
 	var res api.Resource
+
 	if err := yaml.Unmarshal(data, &res); err != nil {
 		return nil, err
 	}
@@ -94,6 +116,7 @@ func (fs *FileStorage) List() ([]*api.Resource, error) {
 	}
 
 	var out []*api.Resource
+
 	for _, f := range files {
 		data, err := os.ReadFile(filepath.Join(fs.BaseDir, f.Name()))
 		if err != nil {
@@ -101,6 +124,7 @@ func (fs *FileStorage) List() ([]*api.Resource, error) {
 		}
 
 		var res api.Resource
+
 		if yaml.Unmarshal(data, &res) == nil {
 			out = append(out, &res)
 		}

@@ -1,0 +1,11 @@
+{
+  "metadata": {
+    "finalizers": [
+      "scheduler.cleanup"
+    ]
+  },
+  "spec": {
+    "name": "app-gc-test",
+    "replicas": 1
+  }
+}

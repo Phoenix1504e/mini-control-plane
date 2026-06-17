@@ -1,0 +1,6 @@
+{
+  "spec": {
+    "name": "app-metadata-test",
+    "replicas": 2
+  }
+}

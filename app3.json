@@ -1,0 +1,6 @@
+{
+  "spec": {
+    "name": "app-scale-test",
+    "replicas": 7
+  }
+}

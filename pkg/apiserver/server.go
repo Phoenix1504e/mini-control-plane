@@ -23,6 +23,6 @@ func NewAPIServer(store storage.Storage) *APIServer {
 
 func (s *APIServer) routes() {
 	s.Router.HandleFunc("/resources", s.handleList)
-	s.Router.HandleFunc("/resource", s.handleCreate)
+	s.Router.HandleFunc("/resource", s.handleResource)
 	s.Router.HandleFunc("/resource/status", s.handleStatusUpdate)
 }
