@@ -1,6 +1,0 @@
-{
-  "spec": {
-    "name": "app-queue-test",
-    "replicas": 4
-  }
-}

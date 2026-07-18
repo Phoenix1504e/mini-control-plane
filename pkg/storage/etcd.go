@@ -10,6 +10,7 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/Phoenix1504e/mini-control-plane/pkg/api"
+	"github.com/Phoenix1504e/mini-control-plane/pkg/events"
 )
 
 type EtcdStorage struct {
@@ -17,11 +18,12 @@ type EtcdStorage struct {
 	root string
 }
 
-// NewEtcdStorage initializes an etcd-backed storage
+// NewEtcdStorage initializes an etcd-backed storage using the 3-node cluster endpoints
 func NewEtcdStorage(root string) (*EtcdStorage, error) {
+	// Updated: Endpoints now include all 3 nodes of your local distributed cluster
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{"localhost:2379"},
-		DialTimeout: 3 * time.Second,
+		Endpoints:   []string{"127.0.0.1:2379", "127.0.0.1:22379", "127.0.0.1:32379"},
+		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
 		return nil, err
@@ -60,6 +62,7 @@ func (s *EtcdStorage) Create(res *api.Resource) error {
 		return fmt.Errorf("resource already exists")
 	}
 
+	_ = events.Record(res.Spec.Name, "CreateSucceeded")
 	return nil
 }
 
@@ -76,6 +79,7 @@ func (s *EtcdStorage) Delete(name string) error {
 		return fmt.Errorf("not found")
 	}
 
+	_ = events.Record(name, "DeleteSucceeded")
 	return nil
 }
 
@@ -107,9 +111,11 @@ func (s *EtcdStorage) Update(res *api.Resource) error {
 	}
 
 	if !txnResp.Succeeded {
+		_ = events.Record(res.Spec.Name, "UpdateConflict")
 		return fmt.Errorf("conflict: resourceVersion mismatch")
 	}
 
+	_ = events.Record(res.Spec.Name, "UpdateSucceeded")
 	return nil
 }
 
@@ -161,6 +167,7 @@ func (s *EtcdStorage) List() ([]*api.Resource, error) {
 	return items, nil
 }
 
+// UpdateStatus mutates only the status field
 func (s *EtcdStorage) UpdateStatus(res *api.Resource) error {
 	key := s.key(res.Spec.Name)
 
@@ -173,7 +180,6 @@ func (s *EtcdStorage) UpdateStatus(res *api.Resource) error {
 		return fmt.Errorf("invalid resourceVersion")
 	}
 
-	// Get latest object
 	resp, err := s.cli.Get(context.Background(), key)
 	if err != nil {
 		return err
@@ -187,9 +193,7 @@ func (s *EtcdStorage) UpdateStatus(res *api.Resource) error {
 		return err
 	}
 
-	// Only mutate STATUS
 	current.Status = res.Status
-
 	val, _ := json.Marshal(&current)
 
 	txnResp, err := s.cli.Txn(context.Background()).
@@ -202,8 +206,10 @@ func (s *EtcdStorage) UpdateStatus(res *api.Resource) error {
 	}
 
 	if !txnResp.Succeeded {
+		_ = events.Record(res.Spec.Name, "StatusUpdateConflict")
 		return fmt.Errorf("conflict updating status")
 	}
 
+	_ = events.Record(res.Spec.Name, "StatusUpdateSucceeded")
 	return nil
 }

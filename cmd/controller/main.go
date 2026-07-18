@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"time"
 
@@ -17,9 +18,13 @@ import (
 )
 
 func main() {
+	// NEW: Flag to capture the mitigation strategy passed from the runner
+	mitigation := flag.String("mitigation", "baseline", "workqueue mitigation strategy")
+	flag.Parse()
+
 	// Unique controller identity
 	controllerID := uuid.NewString()
-	log.Println("Controller starting with ID", controllerID)
+	log.Printf("Controller starting with ID %s running strategy: %s", controllerID, *mitigation)
 
 	// etcd client
 	cli, err := clientv3.New(clientv3.Config{
@@ -48,8 +53,8 @@ func main() {
 		"node-c",
 	})
 
-	// Workqueue
-	queue := workqueue.New(100)
+	// Workqueue (Upgraded to accept the experimental strategy string)
+	queue := workqueue.New(100, *mitigation)
 
 	// Leader election
 	elector := leader.New(cli, "/control-plane/leader", controllerID)
@@ -84,56 +89,33 @@ func main() {
 		}
 
 		for _, res := range items {
-
-			log.Printf(
-				"RESYNC: resource=%s",
-				res.Spec.Name,
-			)
-
+			log.Printf("RESYNC: resource=%s", res.Spec.Name)
 			queue.Add(res.Spec.Name)
 		}
 	}()
 
 	// Worker
 	go func() {
-
 		for {
-
 			key := queue.Get()
 
 			res, err := store.Get(key)
 			if err != nil {
-
 				// Resource already deleted
 				queue.Forget(key)
 				continue
 			}
 
-			log.Printf(
-				"WORKER: processing %s",
-				key,
-			)
+			log.Printf("WORKER: processing %s", key)
 
 			if err := rec.Reconcile(res); err != nil {
-
-				log.Printf(
-					"Worker reconcile failed for %s: %v",
-					key,
-					err,
-				)
-
+				log.Printf("Worker reconcile failed for %s: %v", key, err)
 				queue.AddRateLimited(key)
 				continue
 			}
 
 			if err := sched.Schedule(res); err != nil {
-
-				log.Printf(
-					"Worker schedule failed for %s: %v",
-					key,
-					err,
-				)
-
+				log.Printf("Worker schedule failed for %s: %v", key, err)
 				queue.AddRateLimited(key)
 				continue
 			}
@@ -144,36 +126,20 @@ func main() {
 
 	// Controller event loop
 	for ev := range inf.EventChan {
-
-		log.Printf(
-			"EVENT: %s resource=%s",
-			ev.Type,
-			ev.Resource.Spec.Name,
-		)
+		log.Printf("EVENT: %s resource=%s", ev.Type, ev.Resource.Spec.Name)
 
 		if !elector.IsLeader() {
-			log.Printf(
-				"Skipping event for %s: not leader",
-				ev.Resource.Spec.Name,
-			)
+			log.Printf("Skipping event for %s: not leader", ev.Resource.Spec.Name)
 			continue
 		}
 
 		switch ev.Type {
-
 		case informer.Deleted:
-			log.Printf(
-				"Resource deleted: %s",
-				ev.Resource.Spec.Name,
-			)
+			log.Printf("Resource deleted: %s", ev.Resource.Spec.Name)
 			continue
 
 		case informer.Added, informer.Updated:
-			log.Printf(
-				"QUEUE: %s",
-				ev.Resource.Spec.Name,
-			)
-
+			log.Printf("QUEUE: %s", ev.Resource.Spec.Name)
 			queue.Add(ev.Resource.Spec.Name)
 		}
 	}
