@@ -1,23 +1,25 @@
-# binaries
-runtime/
-leader.lock
-events.log
-
-# Go
-*.exe
-*.out
-*.test
-/vendor/
-.gocache/
-.gomodcache/
-
-# editor
-.vscode/
-.idea/
-
-# OS
-.DS_Store
+cat <<EOF > .gitignore
+# Binaries
 bin/
-*.jsonl
-archived-experiments/
-experiments/leader-failover-old/
+tools/bin/
+
+# Temporary directories
+/tmp/
+*.etcd/
+
+# Python/Go/Build noise
+__pycache__/
+.venv/
+*.log
+*.so
+*.test
+
+# Experiment Data (unless specifically added)
+experiments/*/run-*
+results/*.txt
+!results/results_run_2.txt
+!results/results_run_3.txt
+
+# OS Files
+.DS_Store
+EOF

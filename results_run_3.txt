@@ -1,6 +1,0 @@
---- Aggregated Performance Metrics (10 Trials) ---
-Mean IAT     : 626.2257 ms
-Jitter (Std) : 39743.1114 ms
-P95 Latency  : 2.8842 ms
-P99 Latency  : 4.1651 ms
---------------------------------------------------

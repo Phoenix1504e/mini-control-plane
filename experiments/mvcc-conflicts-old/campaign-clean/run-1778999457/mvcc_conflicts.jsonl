@@ -1,4 +1,0 @@
-{"timestamp":"2026-05-17T06:31:15.986905144Z","type":"mvcc_conflict","resource":"resource-2","message":"5"}
-{"timestamp":"2026-05-17T06:31:20.993567725Z","type":"mvcc_conflict","resource":"resource-3","message":"25"}
-{"timestamp":"2026-05-17T06:31:26.000683789Z","type":"mvcc_conflict","resource":"resource-4","message":"45"}
-{"timestamp":"2026-05-17T06:31:36.011311588Z","type":"mvcc_conflict","resource":"resource-7","message":"86"}

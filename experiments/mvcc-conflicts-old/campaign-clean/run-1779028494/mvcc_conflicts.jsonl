@@ -1,5 +1,0 @@
-{"timestamp":"2026-05-17T14:35:04.103260589Z","type":"mvcc_conflict","resource":"resource-1","message":"88987"}
-{"timestamp":"2026-05-17T14:35:05.106957708Z","type":"mvcc_conflict","resource":"resource-2","message":"88988"}
-{"timestamp":"2026-05-17T14:35:06.111274615Z","type":"mvcc_conflict","resource":"resource-3","message":"88989"}
-{"timestamp":"2026-05-17T14:35:07.115238224Z","type":"mvcc_conflict","resource":"resource-4","message":"88990"}
-{"timestamp":"2026-05-17T14:35:09.124055775Z","type":"mvcc_conflict","resource":"resource-7","message":"88993"}
